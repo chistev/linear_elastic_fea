@@ -21,7 +21,6 @@ def element_stiffness_hex8(coords, E, nu):
     ke : (24,24) ndarray
         Element stiffness matrix
     """
-
     # Constitutive matrix (Hooke's law for isotropic 3D elasticity)
     C = E / ((1 + nu)*(1 - 2*nu)) * np.array([
         [1-nu,   nu,    nu,   0,   0,   0],
@@ -44,13 +43,13 @@ def element_stiffness_hex8(coords, E, nu):
                 # Shape function derivatives wrt natural coords
                 dN_dxi = 0.125 * np.array([
                     [-(1-eta)*(1-zeta), -(1-xi)*(1-zeta), -(1-xi)*(1-eta)],
-                    [ +(1-eta)*(1-zeta), -(1+xi)*(1-zeta), -(1+xi)*(1-eta)],
-                    [ +(1+eta)*(1-zeta), +(1+xi)*(1-zeta), -(1+xi)*(1+eta)],
-                    [ -(1+eta)*(1-zeta), +(1-xi)*(1-zeta), -(1-xi)*(1+eta)],
-                    [ -(1-eta)*(1+zeta), -(1-xi)*(1+zeta), +(1-xi)*(1-eta)],
-                    [ +(1-eta)*(1+zeta), -(1+xi)*(1+zeta), +(1+xi)*(1-eta)],
-                    [ +(1+eta)*(1+zeta), +(1+xi)*(1+zeta), +(1+xi)*(1+eta)],
-                    [ -(1+eta)*(1+zeta), +(1-xi)*(1+zeta), +(1-xi)*(1+eta)]
+                    [+(1-eta)*(1-zeta), -(1+xi)*(1-zeta), -(1+xi)*(1-eta)],
+                    [+(1+eta)*(1-zeta), +(1+xi)*(1-zeta), -(1+xi)*(1+eta)],
+                    [-(1+eta)*(1-zeta), +(1-xi)*(1-zeta), -(1-xi)*(1+eta)],
+                    [-(1-eta)*(1+zeta), -(1-xi)*(1+zeta), +(1-xi)*(1-eta)],
+                    [+(1-eta)*(1+zeta), -(1+xi)*(1+zeta), +(1+xi)*(1-eta)],
+                    [+(1+eta)*(1+zeta), +(1+xi)*(1+zeta), +(1+xi)*(1+eta)],
+                    [-(1+eta)*(1+zeta), +(1-xi)*(1+zeta), +(1-xi)*(1+eta)]
                 ])
 
                 # Jacobian
@@ -139,9 +138,13 @@ def solve_system(K, f, fixed_dofs):
     u[free_dofs] = u_free
     return u
 
-def compute_stresses(nodes, elements, materials, material_ids, u):
+
+# ----------------------------------------------------------------------
+# Compute stresses and strains
+# ----------------------------------------------------------------------
+def compute_stresses_and_strains(nodes, elements, materials, material_ids, u):
     """
-    Compute stress distribution at Gauss points for each element.
+    Compute stress and strain distribution at Gauss points for each element.
     
     Parameters
     ----------
@@ -160,8 +163,11 @@ def compute_stresses(nodes, elements, materials, material_ids, u):
     -------
     stresses : list of ndarray
         List of stress tensors (6 components) at Gauss points for each element
+    strains : list of ndarray
+        List of strain tensors (6 components) at Gauss points for each element
     """
     stresses = []
+    strains = []
     gp = [-1/np.sqrt(3), 1/np.sqrt(3)]  # 2x2x2 Gauss points
 
     for eid, element in enumerate(elements):
@@ -186,6 +192,7 @@ def compute_stresses(nodes, elements, materials, material_ids, u):
         u_e = u[dof]  # Element displacement vector (24x1)
 
         element_stresses = []
+        element_strains = []
         # Loop over Gauss points
         for xi in gp:
             for eta in gp:
@@ -224,11 +231,13 @@ def compute_stresses(nodes, elements, materials, material_ids, u):
 
                     # Compute strain (epsilon = B * u_e)
                     strain = B @ u_e
+                    element_strains.append(strain)
 
                     # Compute stress (sigma = C * epsilon)
                     stress = C @ strain
                     element_stresses.append(stress)
 
         stresses.append(np.array(element_stresses))  # Shape: (8, 6) for 8 Gauss points
+        strains.append(np.array(element_strains))   # Shape: (8, 6) for 8 Gauss points
 
-    return stresses
+    return stresses, strains

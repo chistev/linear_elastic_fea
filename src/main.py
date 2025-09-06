@@ -1,6 +1,6 @@
 from mesh import generate_mesh
 from material import materials
-from fem import assemble_global_stiffness, solve_system, compute_stresses
+from fem import assemble_global_stiffness, solve_system, compute_stresses_and_strains
 import numpy as np
 
 # Mesh
@@ -26,11 +26,21 @@ for n in bottom_nodes:
 u = solve_system(K, f, fixed_dofs)
 print("Displacements:", u)
 
-# Compute stresses
-stresses = compute_stresses(nodes, elements, materials, material_ids, u)
+# Compute stresses and strains
+stresses, strains = compute_stresses_and_strains(nodes, elements, materials, material_ids, u)
+
+# Output stresses
 print("\nStress Distribution (at Gauss points for each element):")
 for eid, stress in enumerate(stresses):
     print(f"\nElement {eid}:")
     for gp, s in enumerate(stress):
         print(f"  Gauss point {gp}: σ_xx={s[0]:.2e}, σ_yy={s[1]:.2e}, σ_zz={s[2]:.2e}, "
               f"σ_xy={s[3]:.2e}, σ_yz={s[4]:.2e}, σ_zx={s[5]:.2e}")
+
+# Output strains
+print("\nStrain Distribution (at Gauss points for each element):")
+for eid, strain in enumerate(strains):
+    print(f"\nElement {eid}:")
+    for gp, e in enumerate(strain):
+        print(f"  Gauss point {gp}: ε_xx={e[0]:.2e}, ε_yy={e[1]:.2e}, ε_zz={e[2]:.2e}, "
+              f"ε_xy={e[3]:.2e}, ε_yz={e[4]:.2e}, ε_zx={e[5]:.2e}")
